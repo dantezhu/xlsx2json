@@ -2,6 +2,7 @@ const xlsx = require('./lib/xlsx-to-json.js');
 const path = require('path');
 const glob = require('glob');
 const config = require('./config.json');
+const fs = require('fs');
 
 /**
  * all commands
@@ -45,12 +46,37 @@ parsed_cmds.forEach(function (e) {
   exec(e);
 });
 
+function delDir(p) {
+  // 读取文件夹中所有文件及文件夹
+  var list = fs.readdirSync(p)
+  list.forEach((v, i) => {
+    // 拼接路径
+    var url = p + '/' + v
+    // 读取文件信息
+    var stats = fs.statSync(url)
+    // 判断是文件还是文件夹
+    if (stats.isFile()) {
+      // 当前为文件，则删除文件
+      fs.unlinkSync(url)
+    } else {
+      // 当前为文件夹，则递归调用自身
+      arguments.callee(url)
+    }
+  })
+  // 删除空文件夹
+  fs.rmdirSync(p)
+}
+
 
 /**
  * export json
  * args: --export [cmd_line_args] [.xlsx files list].
  */
 function exportJson(args) {
+  let dest = path.join(__dirname, config.xlsx.dest);
+  if (fs.existsSync(dest)) {
+      delDir(dest);
+  }
 
   if (typeof args === 'undefined' || args.length === 0) {
     glob(config.xlsx.src, function (err, files) {
@@ -60,14 +86,14 @@ function exportJson(args) {
       }
 
       files.forEach(item => {
-        xlsx.toJson(path.join(__dirname, item), path.join(__dirname, config.xlsx.dest));
+        xlsx.toJson(path.join(__dirname, item), dest);
       });
 
     });
   } else {
     if (args instanceof Array) {
       args.forEach(item => {
-        xlsx.toJson(path.join(__dirname, item), path.join(__dirname, config.xlsx.dest));
+        xlsx.toJson(path.join(__dirname, item), dest);
       });
     }
   }
